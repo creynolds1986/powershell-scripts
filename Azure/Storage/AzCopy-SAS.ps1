@@ -1,7 +1,7 @@
 # https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10
 
-$storageAccountName = "githublab104cr"
-$containerName      = "azcopytest"
+$storageAccountName = "<storage-account-name>"
+$containerName      = "<container-name>"
 $SASToken           = Read-Host "Enter the SAS token (without the leading '?')"
 
 # Create a blob container
