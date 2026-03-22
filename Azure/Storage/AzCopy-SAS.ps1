@@ -8,7 +8,8 @@ $SASToken           = Read-Host "Enter the SAS token (without the leading '?')"
 azcopy make "https://$storageAccountName.blob.core.windows.net/$containerName`?$SASToken"
 
 # Upload a single file
-azcopy copy "C:\temp\example.txt" "https://$storageAccountName.blob.core.windows.net/$containerName/example.txt`?$SASToken"
+$Filename = "test.txt"
+azcopy copy "C:\temp\$Filename" "https://$storageAccountName.blob.core.windows.net/$containerName/$Filename`?$SASToken"
 
 # Upload multiple files using a wildcard
 azcopy copy "C:\temp\*.txt" "https://$storageAccountName.blob.core.windows.net/$containerName`?$SASToken"
