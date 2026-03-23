@@ -1,6 +1,6 @@
 ﻿#Replicates the scope reservations between failover DHCP servers set up as load balance as reservations do not automatically sync by default.
 
-[ipaddress]$Scope="192.168.50.0"
+[ipaddress]$Scope="192.168.1.0"
 $Server1="server1"
 $Server2="server2"
 
