@@ -1,25 +1,29 @@
-# This script configures a Windows image to use UK English as the default language and regional settings, and prepares it for sysprep with an unattend.xml file to ensure these settings persist across user sessions.
+# This script configures a Windows VM to use UK English settings and prepares it for sysprep. It sets the culture, system locale, home location, and keyboard layout to UK standards. It also modifies the default user profile registry settings to ensure new users get the correct locale settings. Finally, it creates an unattend.xml file to ensure that the settings persist through the sysprep process.
 
-# 1. Install UK Language Pack and Set Regional Defaults
-Write-Host "Installing UK English Language Pack..." -ForegroundColor Cyan
-Install-Language en-GB
-Set-SystemPreferredUILanguage en-GB
+# 1. Quick Regional & Keyboard Setup (No Download Required)
+Write-Host "Configuring UK Regional & Keyboard settings..." -ForegroundColor Cyan
 Set-Culture en-GB
 Set-WinSystemLocale en-GB
-Set-WinHomeLocation -GeoId 242 # 242 is United Kingdom
-Set-WinUserLanguageList -LanguageList en-GB -Force
+Set-WinHomeLocation -GeoId 242 # United Kingdom
 Set-TimeZone -Id "GMT Standard Time"
 
-# 2. Configure Registry for Default User Profile (Multi-session Support)
-Write-Host "Configuring Default User Profile for UK Locale..." -ForegroundColor Cyan
+# Force UK Keyboard for current session
+$LanguageList = New-WinUserLanguageList -Language "en-GB"
+Set-WinUserLanguageList -LanguageList $LanguageList -Force
+
+# 2. Configure Registry for Multi-session (Default User Profile)
+Write-Host "Applying settings to Default User Profile..." -ForegroundColor Cyan
 $DefaultUserRegistry = "C:\Users\Default\NTUSER.DAT"
-reg load HKU\DefaultUser $DefaultUserRegistry
-$RegPath = "HKU\DefaultUser\Control Panel\International"
-Set-ItemProperty -Path "Registry::$RegPath" -Name "Locale" -Value "00000809"
-Set-ItemProperty -Path "Registry::$RegPath" -Name "sShortDate" -Value "dd/MM/yyyy"
-reg unload HKU\DefaultUser
+if (Test-Path $DefaultUserRegistry) {
+    reg load HKU\DefaultUser $DefaultUserRegistry
+    $RegPath = "HKU\DefaultUser\Control Panel\International"
+    Set-ItemProperty -Path "Registry::$RegPath" -Name "Locale" -Value "00000809"
+    Set-ItemProperty -Path "Registry::$RegPath" -Name "sShortDate" -Value "dd/MM/yyyy"
+    reg unload HKU\DefaultUser
+}
 
 # 3. Create Unattend.xml for Sysprep persistence
+# This tells Windows to use UK English for the final OS installation
 Write-Host "Creating Unattend.xml..." -ForegroundColor Cyan
 $unattendPath = "C:\Windows\System32\Sysprep\unattend.xml"
 $unattendContent = @"
@@ -58,5 +62,5 @@ $unattendContent = @"
 $unattendContent | Out-File -FilePath $unattendPath -Encoding UTF8
 
 # 4. Final Sysprep Command
-Write-Host "Starting Sysprep and Shutting Down..." -ForegroundColor Yellow
+Write-Host "Starting Sysprep... The VM will shut down when finished." -ForegroundColor Yellow
 Start-Process -FilePath "C:\Windows\System32\Sysprep\sysprep.exe" -ArgumentList "/oobe /generalize /shutdown /unattend:$unattendPath" -Wait
