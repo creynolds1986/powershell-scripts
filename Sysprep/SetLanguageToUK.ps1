@@ -2,7 +2,7 @@
 
 # 1. Disable BitLocker and Wait for Decryption
 $drive = Get-BitLockerVolume -MountPoint "C:"
-if ($drive.VolumeStatus -ne "Decrypted") {
+if ($drive.VolumeStatus -ne "FullyDecrypted") {
     Write-Host "BitLocker is active ($($drive.VolumeStatus)). Starting decryption..." -ForegroundColor Yellow
     Disable-BitLocker -MountPoint "C:"
     
