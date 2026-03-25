@@ -4,7 +4,7 @@
 # It also modifies the default user profile registry settings to ensure that any new users created on the system will have the correct locale settings.
 # Finally, it creates an unattend.xml file that specifies the regional settings to be applied during the sysprep process, ensuring that these settings persist when the image is deployed to new VMs.
 
-# ── 1. BitLocker (safe check for Multi Session where feature may be absent) ──
+# ── 1. BitLocker ──
 try {
     $drive = Get-BitLockerVolume -MountPoint "C:" -ErrorAction Stop
     if ($drive.VolumeStatus -ne "FullyDecrypted") {
@@ -39,13 +39,12 @@ if (Test-Path $defaultHive) {
     Set-ItemProperty -Path $regPath -Name "sLongDate"   -Value "dd MMMM yyyy"
     Set-ItemProperty -Path $regPath -Name "sTimeFormat" -Value "HH:mm:ss"
 
-    # Force GC to release any handles before unloading
     [gc]::Collect()
     [gc]::WaitForPendingFinalizers()
     reg unload HKU\DefaultUser | Out-Null
 }
 
-# ── 4. Unattend.xml (specialize only — no oobeSystem for Multi Session) ──
+# ── 4. Unattend.xml ──
 $unattendPath = "C:\Windows\System32\Sysprep\unattend.xml"
 
 $unattendContent = @"
@@ -75,11 +74,17 @@ $unattendContent = @"
 </unattend>
 "@
 
-# Write UTF-8 WITHOUT BOM — critical for sysprep XML parser
 [System.IO.File]::WriteAllText($unattendPath, $unattendContent, [System.Text.UTF8Encoding]::new($false))
 Write-Host "unattend.xml written to $unattendPath" -ForegroundColor Green
 
-# ── 5. Sysprep ──
+# ── 5. Fix BCD/EFI write issue on Azure VMs ──
+Write-Host "Applying BCD/EFI sysprep fix..." -ForegroundColor Cyan
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SysprepStatus" /v "GeneralizationState" /t REG_DWORD /d 7 /f | Out-Null
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SysprepStatus" /v "CleanupState" /t REG_DWORD /d 7 /f | Out-Null
+reg add "HKLM\SYSTEM\Setup\Status\SysprepStatus" /v "GeneralizationState" /t REG_DWORD /d 7 /f | Out-Null
+reg add "HKLM\SYSTEM\Setup\Status\SysprepStatus" /v "CleanupState" /t REG_DWORD /d 7 /f | Out-Null
+
+# ── 6. Sysprep ──
 Write-Host "Running sysprep — VM will shut down on completion." -ForegroundColor Yellow
 Start-Process -FilePath "C:\Windows\System32\Sysprep\sysprep.exe" `
               -ArgumentList "/generalize /oobe /shutdown /unattend:`"$unattendPath`"" `
